@@ -1,12 +1,12 @@
-# personal-skills
+# skills
 
 個人用の Claude Code スキル集。
 
 ## 使い方
 
 ```
-git clone <このリポジトリ> ~/personal-skills
-ln -s ~/personal-skills/<スキル名> ~/.claude/skills/<スキル名>
+git clone <このリポジトリ> ~/skills
+ln -s ~/skills/<スキル名> ~/.claude/skills/<スキル名>
 ```
 
 ## スキル
