@@ -1,0 +1,33 @@
+---
+config:
+  theme: redux-color
+  layout: elk
+  themeCSS: '.actor { fill: #FFFFFF !important; stroke: #28253D !important; stroke-width: 2px !important; } .messageLine1 { stroke: #999999 !important; }'
+---
+%% 目的: orders の DB だけ集計ジョブが失敗する流れを、割り当てから接続失敗まで順に示す
+%% 読み手: チーム内・インフラ担当
+sequenceDiagram
+  box rgb(253,244,255) Kubernetes クラスタ（demo-cluster）
+    participant SCH as ジョブスケジューラ Pod（リーダー）
+    participant W4 as ジョブ Worker Pod（app-node-4）
+    participant W5 as ジョブ Worker Pod（batch-node-1）
+  end
+  box rgb(236,254,255) DB（受け付ける接続元：db-access）
+    participant DBU@{ "type": "database", "alias": "PostgreSQL（users）" }
+    participant DBO@{ "type": "database", "alias": "PostgreSQL（orders）" }
+  end
+
+  W4-->>SCH: ジョブをポーリング
+  SCH-->>W4: users の集計を割り当て
+  W5-->>SCH: ジョブをポーリング
+  SCH-->>W5: orders の集計を割り当て
+
+  rect rgb(240,253,244)
+    W4->>DBU: 接続して集計する
+    DBU-->>W4: 集計結果
+  end
+
+  rect rgb(253,226,226)
+    W5-xDBO: 接続して集計する（SG で弾かれる）
+  end
+  Note over W5: batch-node-1 の SG に db-access がない

@@ -1,0 +1,79 @@
+---
+config:
+  theme: redux-color
+  layout: elk
+---
+%% 目的: orders の DB だけ集計ジョブが失敗する理由を示す（ジョブが db-access のない batch-node-1 の Worker に割り当てられ、SG で弾かれる）
+%% 読み手: チーム内・インフラ担当
+flowchart LR
+  subgraph K8S["Kubernetes クラスタ（demo-cluster）"]
+    subgraph N1["ノード（app-node-1）"]
+      subgraph S1["ノードの SG（db-access あり）"]
+        W1["ジョブ Worker Pod"]
+        SCH1["ジョブスケジューラ Pod（リーダー）"]
+      end
+    end
+    subgraph N2["ノード（app-node-2）"]
+      subgraph S2["ノードの SG（db-access あり）"]
+        W2["ジョブ Worker Pod"]
+      end
+    end
+    subgraph N3["ノード（app-node-3）"]
+      subgraph S3["ノードの SG（db-access あり）"]
+        W3["ジョブ Worker Pod"]
+      end
+    end
+    subgraph N4["ノード（app-node-4）"]
+      subgraph S4["ノードの SG（db-access あり）"]
+        W4["ジョブ Worker Pod"]
+        SCH2["ジョブスケジューラ Pod"]
+      end
+    end
+    subgraph N5["ノード（batch-node-1）"]
+      subgraph S5["ノードの SG（db-access なし）"]
+        W5["ジョブ Worker Pod"]
+      end
+    end
+    subgraph N6["ノード（batch-node-2）"]
+      subgraph S6["ノードの SG（db-access なし）"]
+        W6["ジョブ Worker Pod"]
+        SCH3["ジョブスケジューラ Pod"]
+      end
+    end
+  end
+  subgraph DBS["DB（受け付ける接続元：db-access）"]
+    DBU[("PostgreSQL（users）")]
+    DBO[("PostgreSQL（orders）")]
+    DBP[("PostgreSQL（payments）")]
+  end
+
+  W1 -->|ジョブをポーリング → payments の集計| SCH1
+  W2 -->|ジョブをポーリング → なし| SCH1
+  W3 -->|ジョブをポーリング → なし| SCH1
+  W4 -->|ジョブをポーリング → users の集計| SCH1
+  W5 -->|ジョブをポーリング → orders の集計| SCH1
+  W6 -->|ジョブをポーリング → なし| SCH1
+
+  W4 -->|接続して集計する| DBU
+  W5 -->|接続して集計する（SG で弾かれる）| DBO
+  W1 -->|接続して集計する| DBP
+
+  style K8S fill:#FDF4FF,stroke:#E879F9
+  style N1 fill:#F0FDFA,stroke:#2DD4BF
+  style S1 fill:#FFF7ED,stroke:#FB923C
+  style N2 fill:#ECFEFF,stroke:#22D3EE
+  style S2 fill:#F0FDF4,stroke:#4ADE80
+  style N3 fill:#F5F3FF,stroke:#A78BFA
+  style S3 fill:#FEFCE8,stroke:#FACC15
+  style N4 fill:#FEFCE8,stroke:#FACC15
+  style S4 fill:#EEF2FF,stroke:#818CF8
+  style N5 fill:#F7FEE7,stroke:#A3E635
+  style N6 fill:#FDF4FF,stroke:#E879F9
+  style DBS fill:#ECFEFF,stroke:#22D3EE
+  style S5 fill:#fde2e2,stroke:#d33
+  style S6 fill:#fde2e2,stroke:#d33
+  linkStyle 0,1,2,3,4,5 stroke:#999
+  linkStyle 6,8 stroke:#16A34A,stroke-width:2px
+  linkStyle 7 stroke:#d33,stroke-width:2px
+  classDef movable fill:#f5f5f5,stroke:#888,stroke-dasharray:5 5,color:#555
+  class SCH1,SCH2,SCH3 movable
